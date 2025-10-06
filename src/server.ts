@@ -96,7 +96,8 @@ class WebDAVServer {
     // Handle tool calls
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (request.params.name === "dav_request") {
-        return await this.handleDavRequest(request.params.arguments as DavRequestArgs);
+        const args = request.params.arguments as unknown as DavRequestArgs;
+        return await this.handleDavRequest(args);
       }
       
       throw new Error(`Unknown tool: ${request.params.name}`);
@@ -134,7 +135,7 @@ class WebDAVServer {
       const response = await fetch(url, {
         method: args.method,
         headers,
-        body: args.body,
+        ...(args.body !== undefined && { body: args.body }),
       });
 
       const responseText = await response.text();
