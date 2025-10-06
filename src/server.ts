@@ -6,7 +6,6 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import fetch from "node-fetch";
 
 // Configuration from environment variables
 const DAV_SERVER_URL = process.env.DAV_SERVER_URL || "";
