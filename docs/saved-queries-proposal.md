@@ -1,7 +1,7 @@
 # Proposal: Saved WebDAV Query Feature
 
 ## Summary
-Provide a mechanism for users to define and persist a set of commonly used WebDAV request "queries" (parameterised request templates) that the MCP server can enumerate and execute on demand. These saved queries reduce repetition, promote consistency, and enable higher-level agent prompting ("Use saved query: list_root" rather than manually crafting a PROPFIND body each time).
+Provide a mechanism for users to define and persist a set of commonly used WebDAV request "queries" (parameterised request templates) that the MCP server can enumerate and execute on demand. These [...]  
 
 ## Goals
 - Allow users to persist named WebDAV request templates.
@@ -40,7 +40,7 @@ Introduce two new MCP tools:
    - Resolves template, performs placeholder substitution, dispatches underlying request using existing `dav_request` logic.
 
 ### Storage Format
-A directory `saved-queries/` (configurable via env var `DAV_SAVED_QUERIES_DIR`, default `./saved-queries`). Each file is either JSON or YAML (initially, support JSON only for simplicity) containing an array of query objects:
+A directory `saved-queries/` (configurable via env var `DAV_SAVED_QUERIES_DIR`, default `./saved-queries`). Each file is either JSON or YAML (initially, support JSON only for simplicity) containin[...]  
 
 ```json
 [
@@ -177,5 +177,115 @@ interface SavedQueryDefinition {
 - Add grouping/tagging for queries.
 - Provide summarised docs tool returning markdown description of all queries.
 
+### Example Conversation (Human ↔ Agent)
+Illustrative end-to-end flow once the feature is implemented.
+
+```
+Human: Can you list the saved WebDAV queries?
+
+Agent: I will enumerate saved queries.
+Agent Tool Invocation:
+{
+  "name": "list_saved_queries",
+  "arguments": {}
+}
+
+Tool Response:
+{
+  "queries": [
+    {
+      "name": "list_root",
+      "description": "List root collection depth 1",
+      "method": "PROPFIND",
+      "pathTemplate": "/",
+      "requiredParams": [],
+      "depth": "1"
+    },
+    {
+      "name": "put_text_file",
+      "description": "Upload a text file at /notes/<filename>",
+      "method": "PUT",
+      "pathTemplate": "/notes/{{filename}}",
+      "requiredParams": ["filename", "content"]
+    }
+  ]
+}
+
+Agent: Available queries are 'list_root' and 'put_text_file'. What shall I run?
+
+Human: Run the one that lists the root.
+
+Agent: Executing 'list_root'.
+Agent Tool Invocation:
+{
+  "name": "run_saved_query",
+  "arguments": {
+    "name": "list_root",
+    "params": {}
+  }
+}
+
+Tool Response (simplified):
+{
+  "status": 207,
+  "headers": {"content-type": "text/xml; charset=utf-8"},
+  "body": "<multistatus>...</multistatus>"
+}
+
+Agent: Directory listing returned. Shall I upload a note file?
+
+Human: Yes, create meeting.txt with content 'Agenda draft'.
+
+Agent: Executing upload via saved query.
+Agent Tool Invocation:
+{
+  "name": "run_saved_query",
+  "arguments": {
+    "name": "put_text_file",
+    "params": {
+      "filename": "meeting.txt",
+      "content": "Agenda draft"
+    }
+  }
+}
+
+Tool Response:
+{
+  "status": 201,
+  "headers": {"content-length": "0"},
+  "body": ""
+}
+
+Agent: /notes/meeting.txt created successfully.
+
+Human: Try uploading another file but forget the content.
+
+Agent: Attempting with missing parameter to show error.
+Agent Tool Invocation:
+{
+  "name": "run_saved_query",
+  "arguments": {
+    "name": "put_text_file",
+    "params": {
+      "filename": "empty.txt"
+    }
+  }
+}
+
+Tool Error Response:
+{
+  "isError": true,
+  "error": "Missing required parameters: content"
+}
+
+Agent: The server rejected the request because 'content' was not supplied.
+```
+
+### Conversation Highlights
+- Discovery without prior hard-coding (via `list_saved_queries`).
+- Parameter safety and validation (clear missing parameter error).
+- Template reuse reduces request verbosity.
+- Consistent response format identical to direct `dav_request` usage.
+
 ## Conclusion
-This feature introduces a lightweight, human-readable mechanism to store and re-use named WebDAV request templates, improving ergonomics for both human users and automated agents. The approach minimises complexity while leaving room for future enhancements such as sanitisation, defaults, and remote synchronisation.
+This feature introduces a lightweight, human-readable mechanism to store and re-use named WebDAV request templates, improving ergonomics for both human users and automated agents. The approach mi[...]  
