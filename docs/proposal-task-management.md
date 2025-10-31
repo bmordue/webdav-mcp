@@ -30,7 +30,7 @@ This feature will consist of three new MCP tools:
 
 -   **`create_task`**: This tool will take a `calendarUrl` and a `data` object. It will use the `generate_structured_data` tool to create an iCalendar string for the new task and then use a `PUT` request to save it to the server.
 -   **`list_tasks`**: This tool will take a `calendarUrl` and perform a `REPORT` request to fetch all VTODO components. It will then parse the results to return a simple JSON array of tasks.
--   **`update_task`**: This tool will take a `taskUrl` and a `data` object. It will first `GET` the existing task, modify its iCalendar data based on the `data` object, and then `PUT` the updated resource back to the server.
+-   **`update_task`**: This tool will take a `taskUrl` and a `data` object. It will first `GET` the existing task (including its ETag), modify its iCalendar data based on the `data` object, and then `PUT` the updated resource back to the server using a conditional request with the `If-Match` header to prevent race conditions.
 
 ### MCP Tool Schemas
 
