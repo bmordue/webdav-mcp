@@ -9,7 +9,7 @@ Provide a mechanism for users to define reusable property sets (presets) for PRO
 - Expose presets to MCP clients via a discovery tool (`list_property_presets`).
 - Allow PROPFIND requests to reference presets by name instead of full XML bodies.
 - Keep storage format simple (human-editable JSON or YAML).
-- Provide sensible built-in presets (e.g. "basic", "detailed", "custom").
+- Provide sensible built-in presets (e.g. "basic", "detailed", "minimal").
 - Maintain backward compatibility with existing raw PROPFIND XML bodies.
 
 ## Non-Goals
