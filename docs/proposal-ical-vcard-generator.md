@@ -35,7 +35,7 @@ The `generate_structured_data` tool will take a `type` parameter and a `data` ob
 {
   "type": "object",
   "properties": {
-    "dataType": {
+    "type": {
       "type": "string",
       "enum": ["event", "task", "contact"],
       "description": "The type of data to generate."
@@ -45,7 +45,7 @@ The `generate_structured_data` tool will take a `type` parameter and a `data` ob
       "description": "A JSON object with the data for the entry."
     }
   },
-  "required": ["dataType", "data"]
+  "required": ["type", "data"]
 }
 ```
 
