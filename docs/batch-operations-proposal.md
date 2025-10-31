@@ -60,8 +60,7 @@ Introduce one new MCP tool:
       "depth": "1"
     }
   ],
-  "mode": "atomic",
-  "continueOnError": false
+  "mode": "atomic"
 }
 ```
 
