@@ -58,7 +58,7 @@ Extend existing `dav_request` tool:
   "serverId": "production",
   "url": "https://dav.example.com/remote.php/webdav/",
   "username": "alice",
-  "password": "s3cret",
+  "passwordEncrypted": "s3cret-encrypted-value",
   "priority": 1,
   "group": "prod",
   "maxConnections": 10,
