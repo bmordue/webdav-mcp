@@ -157,7 +157,7 @@ Example storage:
     "mechanism": "polling",
     "pollingInterval": 60,
     "createdAt": "2025-01-30T10:00:00Z",
-    "expiresAt": "2025-02-30T10:00:00Z",
+    "expiresAt": "2025-02-28T10:00:00Z",
     "baseline": {
       "/documents/file1.pdf": {"etag": "\"abc123\"", "lastModified": "2025-01-29T10:00:00Z"},
       "/documents/file2.pdf": {"etag": "\"def456\"", "lastModified": "2025-01-28T14:30:00Z"}
