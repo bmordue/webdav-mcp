@@ -117,13 +117,7 @@ When an event occurs, deliver JSON payload to webhook URL:
       "eventId": "evt-xyz789",
       "eventType": "modified",
       "resourcePath": "/documents/report.pdf",
-      "timestamp": "2025-01-30T11:15:30Z",
-      "properties": {
-        "getlastmodified": "2025-01-30T11:15:30Z",
-        "getetag": "\"abc123def456\"",
-        "getcontentlength": "524288"
-      },
-      "previousEtag": "\"old123etag456\""
+      "timestamp": "2025-01-30T11:15:30Z"
     }
   ]
 }
