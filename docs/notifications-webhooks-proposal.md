@@ -193,7 +193,7 @@ Response:
       "webhookUrl": "https://example.com/webhook",
       "mechanism": "polling",
       "createdAt": "2025-01-30T10:00:00Z",
-      "expiresAt": "2025-02-30T10:00:00Z"
+      "expiresAt": "2025-02-28T10:00:00Z"
     }
   ]
 }
