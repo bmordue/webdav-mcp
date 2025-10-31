@@ -55,7 +55,7 @@ The `query_calendar` tool will take a calendar URL, a start date, and an end dat
 
 **`query_calendar` Response Example:**
 
-The tool will return the raw response from the `dav_request` tool, which will contain the multi-status XML response from the server. The body of the response will be a string containing the iCalendar data for the matching events.
+The tool will return the raw response from the `dav_request` tool, which will contain the multi-status XML response from the server. The body of the response will be a string containing this multi-status XML, which in turn contains the iCalendar data for matching events.
 
 ### Error Handling
 
