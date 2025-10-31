@@ -30,7 +30,7 @@ This feature will consist of three new MCP tools:
 
 -   **`create_task`**: This tool will take a `calendarUrl` and a `data` object. It will use the `generate_structured_data` tool to create an iCalendar string for the new task and then use a `PUT` request to save it to the server.
 -   **`list_tasks`**: This tool will take a `calendarUrl` and perform a `REPORT` request to fetch all VTODO components. It will then parse the results to return a simple JSON array of tasks.
--   **`update_task`**: This tool will take a `taskUrl` and a `data` object. It will first `GET` the existing task, modify its iCalendar data based on the `data` object, and then `PUT` the updated resource back to the server.
+-   **`update_task`**: This tool will take a `taskUrl` and a `data` object. It will first `GET` the existing task, capturing the `ETag` header from the response. It will then modify the iCalendar data based on the `data` object, and `PUT` the updated resource back to the server with an `If-Match` header containing the ETag value. This prevents the "lost update" problem by ensuring the update only succeeds if the resource has not been modified by another client since it was retrieved.
 
 ### MCP Tool Schemas
 
@@ -68,6 +68,7 @@ This feature will consist of three new MCP tools:
 
 -   This feature involves writing data to the server, so care must be taken to validate and sanitize all inputs to prevent injection attacks.
 -   All operations are confined to the user's own calendars, so there is no risk of cross-user data access.
+-   The `update_task` tool uses ETags with the `If-Match` header to prevent race conditions and lost updates. If the resource has been modified by another client between the GET and PUT operations, the server will return a 412 Precondition Failed status, and the operation will need to be retried.
 
 ## Incremental Rollout Plan
 
