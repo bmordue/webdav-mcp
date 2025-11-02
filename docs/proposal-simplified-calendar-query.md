@@ -8,15 +8,15 @@ Introduce a high-level tool, `query_calendar`, designed to simplify common CalDA
 
 -   Provide a new MCP tool, `query_calendar`, that accepts a calendar URL, a start date, and an end date.
 -   The tool will generate and execute the appropriate CalDAV `REPORT` request to filter events by the specified time range.
--   Return the raw iCalendar data for the matching events.
+-   Parse the response to return a structured JSON array of events.
 -   Abstract away the complexity of the CalDAV `calendar-query` `REPORT` operation.
 -   Provide clear error messages for common issues, such as an invalid calendar URL or incorrect date formats.
 
 ## Non-Goals
 
--   This tool will not parse the iCalendar data in the response. It will return the raw data as a string.
 -   It will not support complex queries beyond a simple time-range filter (e.g., no filtering by event properties).
 -   It will not perform any write operations (e.g., creating or updating events).
+-   It will not parse all possible iCalendar properties, focusing on the most common ones like summary, start time, end time, and location.
 
 ## User Stories
 
@@ -26,7 +26,7 @@ Introduce a high-level tool, `query_calendar`, designed to simplify common CalDA
 
 ## Design Overview
 
-The `query_calendar` tool will take a calendar URL, a start date, and an end date as arguments. It will construct an XML body for a `calendar-query` `REPORT` request, including a `time-range` filter. It will then execute this `REPORT` request against the provided calendar URL.
+The `query_calendar` tool will take a calendar URL, a start date, and an end date as arguments. It will construct an XML body for a `calendar-query` `REPORT` request, including a `time-range` filter. It will then execute this `REPORT` request against the provided calendar URL and parse the response to return a simple JSON array of events.
 
 ### MCP Tool Schema
 
@@ -55,7 +55,25 @@ The `query_calendar` tool will take a calendar URL, a start date, and an end dat
 
 **`query_calendar` Response Example:**
 
-The tool will return the raw response from the `dav_request` tool, which will contain the multi-status XML response from the server. The body of the response will be a string containing this multi-status XML, which in turn contains the iCalendar data for matching events.
+```json
+{
+  "events": [
+    {
+      "url": "<url-to-event-1>",
+      "summary": "Team Meeting",
+      "startDate": "2023-01-15T10:00:00Z",
+      "endDate": "2023-01-15T11:00:00Z",
+      "location": "Conference Room A"
+    },
+    {
+      "url": "<url-to-event-2>",
+      "summary": "Project Review",
+      "startDate": "2023-01-20T14:00:00Z",
+      "endDate": "2023-01-20T15:30:00Z"
+    }
+  ]
+}
+```
 
 ### Error Handling
 
@@ -70,4 +88,5 @@ The tool will return the raw response from the `dav_request` tool, which will co
 
 1.  Add the `query_calendar` tool to the list of available tools in `server.ts`.
 2.  Implement the handler for `query_calendar`, including the logic to generate the `REPORT` request body.
-3.  Add unit tests to verify that the XML body is generated correctly and that the tool handles date validation.
+3.  Implement the parsing logic to extract event data from the multi-status XML response and convert it to structured JSON.
+4.  Add unit tests to verify that the XML body is generated correctly, the response is parsed correctly, and that the tool handles date validation.
