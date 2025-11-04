@@ -24,6 +24,22 @@ Introduce a high-level tool to automate the discovery of essential CalDAV and Ca
 2.  As an agent developer, I can use this tool as the first step in a workflow to configure a client for a user's CalDAV or CardDAV account.
 3.  As an operator, if the discovery fails, I receive a clear error message indicating which step of the process failed (e.g., "Could not find calendar-home-set property").
 
+## Rating and Rationale
+
+**Score: 8/10**
+
+This proposal scores highly for the following reasons:
+
+**Suitability (Excellent):** Service discovery is essential for CalDAV and CardDAV operations. The proposal addresses a real bootstrapping problem—users and agents need to discover service endpoints before they can perform useful work. This is a fundamental requirement for any CalDAV/CardDAV implementation.
+
+**Goodness-of-fit (Excellent):** The implementation fits perfectly with the existing architecture. It uses the same `PROPFIND` operations that are already supported, just orchestrating them in a specific sequence. The tool requires no arguments and returns structured URLs, making it simple and intuitive to use.
+
+**Value Delivered (High):** This tool eliminates manual configuration steps and protocol knowledge requirements. Users can call a single tool to discover all necessary service URLs instead of reading WebDAV specifications. This is particularly valuable for agent developers who want to build CalDAV/CardDAV functionality without deep protocol expertise.
+
+**Limited Scope Expansion (Excellent):** The proposal is remarkably focused—it performs discovery only, with no additional features. The implementation is straightforward: two sequential PROPFIND requests with XML parsing. There are no complex dependencies, persistent state, or configuration requirements. The rollout plan is minimal and achievable.
+
+The only minor limitation is that it specifically targets CalDAV/CardDAV discovery, making it less generally applicable than some other proposals. However, this focus is also a strength, as it keeps the implementation simple and targeted.
+
 ## Design Overview
 
 The `discover_services` tool will execute a series of `PROPFIND` requests as follows:

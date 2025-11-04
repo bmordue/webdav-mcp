@@ -287,5 +287,21 @@ Agent: The server rejected the request because 'content' was not supplied.
 - Template reuse reduces request verbosity.
 - Consistent response format identical to direct `dav_request` usage.
 
+## Rating and Rationale
+
+**Score: 7/10**
+
+This proposal receives a good score for the following reasons:
+
+**Suitability (Good):** Saved queries address a common pattern in WebDAV usage—repeating similar requests with different parameters. This is a legitimate usability enhancement that would benefit both interactive users and automated agents.
+
+**Goodness-of-fit (Good):** The proposal integrates well with existing architecture by building on the current `dav_request` tool. The file-based storage approach is consistent with the project's lightweight philosophy, and the template substitution mechanism is straightforward. The caching strategy is sensible and similar to the property presets proposal.
+
+**Value Delivered (Good):** Users gain significant productivity through reusable templates, reducing errors and ensuring consistency. The parameter validation and clear error messages add value. The ability to version-control query definitions (as JSON files) is a nice benefit for teams.
+
+**Limited Scope Expansion (Moderate):** While the proposal is focused on template substitution, there are several areas of concern: (1) Parameter injection security requires careful handling of path traversal and XML injection, (2) The temptation to add "just one more feature" like conditionals, loops, or sanitisation filters could lead to scope creep, and (3) The proposal acknowledges several "future extensions" that could expand scope significantly.
+
+The implementation complexity is moderate—template parsing and substitution are well-understood problems, but the security considerations around parameter injection need careful attention. The proposal wisely limits initial scope to simple placeholder replacement without complex logic.
+
 ## Conclusion
 This feature introduces a lightweight, human-readable mechanism to store and re-use named WebDAV request templates, improving ergonomics for both human users and automated agents. The approach mi[...]  
