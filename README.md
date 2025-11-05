@@ -264,7 +264,6 @@ Errors are returned with `isError: true` and a JSON body containing an `error` f
 | Empty PROPFIND result | Wrong `Depth` or path | Adjust `depth` or check path correctness |
 | Tool not listed | MCP client not connected properly | Ensure the command and path are correct |
 | Preset not found | Wrong preset name | Use `list_property_presets` to view available names |
-| Unexpected PROPFIND body | Provided `body` whilst also specifying `preset` | Remove manual body when using presets |
 
 ## Contributing
 
