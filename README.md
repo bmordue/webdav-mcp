@@ -6,6 +6,8 @@ A Model Context Protocol (MCP) server that exposes a single tool for making auth
 
 - Implements MCP server via `@modelcontextprotocol/sdk`.
 - Single tool `dav_request` supporting common WebDAV methods: `PROPFIND`, `PROPPATCH`, `MKCOL`, `COPY`, `MOVE`, `LOCK`, `UNLOCK`, `GET`, `PUT`, `DELETE`.
+- Property presets for simpler `PROPFIND` requests (built-ins: `basic`, `detailed`, `minimal`).
+- Tools to enumerate and inspect presets: `list_property_presets`, `get_property_preset`.
 - Automatic Basic Authentication using environment variables.
 - Depth header handling for `PROPFIND`.
 - Returns structured JSON (status, headers, body) wrapped as MCP text content.
@@ -49,6 +51,17 @@ Set the following environment variables before starting the server:
 | `DAV_PASSWORD` | Optional | Password for Basic Auth |
 
 If `DAV_USERNAME` and `DAV_PASSWORD` are both set, Basic Authentication is added automatically.
+
+### Property Presets Configuration
+
+Optional environment variables for preset handling:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DAV_PROPERTY_PRESETS_DIR` | `./property-presets` | Directory containing JSON files with preset definitions. Each file may be a single preset object or an array of presets. |
+| `DAV_PROPERTY_PRESETS_TTL_MS` | `5000` | Millisecond TTL for cache before checking for file changes. |
+
+If the directory does not exist, built-in presets are still available.
 
 ## Usage
 
@@ -95,10 +108,65 @@ Input JSON schema (simplified):
   "body": "<optional XML or other content>",
   "headers": {"<name>": "<value>"},
   "depth": "0|1|infinity"
+  "preset": "<optional preset name>",
+  "additionalProperties": [ {"namespace": "DAV:", "name": "quota-used-bytes"} ]
 }
 ```
 
 Minimum required fields: `method`, `path`.
+
+If `preset` is provided for a `PROPFIND` request, the `body` field is ignored and automatically generated from the preset plus any `additionalProperties` supplied.
+
+### Tools: `list_property_presets`, `get_property_preset`
+
+List presets:
+
+```json
+{
+  "name": "list_property_presets",
+  "arguments": {}
+}
+```
+
+Get a preset definition:
+
+```json
+{
+  "name": "get_property_preset",
+  "arguments": {"name": "basic"}
+}
+```
+
+Example `PROPFIND` using a preset:
+
+```json
+{
+  "name": "dav_request",
+  "arguments": {
+    "method": "PROPFIND",
+    "path": "/photos",
+    "depth": "1",
+    "preset": "basic"
+  }
+}
+```
+
+With extra properties:
+
+```json
+{
+  "name": "dav_request",
+  "arguments": {
+    "method": "PROPFIND",
+    "path": "/media",
+    "depth": "1",
+    "preset": "basic",
+    "additionalProperties": [
+      {"namespace": "DAV:", "name": "quota-used-bytes"}
+    ]
+  }
+}
+```
 
 ### Examples
 
@@ -170,6 +238,12 @@ npm run typecheck
 npm run build
 ```
 
+Run tests (covers preset logic):
+
+```bash
+npm test
+```
+
 ## Error Handling
 
 Errors are returned with `isError: true` and a JSON body containing an `error` field. The server also logs MCP-level errors to stderr with prefix `[MCP Error]`.
@@ -189,6 +263,7 @@ Errors are returned with `isError: true` and a JSON body containing an `error` f
 | Authentication fails (401) | Wrong credentials | Verify `DAV_USERNAME`/`DAV_PASSWORD` |
 | Empty PROPFIND result | Wrong `Depth` or path | Adjust `depth` or check path correctness |
 | Tool not listed | MCP client not connected properly | Ensure the command and path are correct |
+| Preset not found | Wrong preset name | Use `list_property_presets` to view available names |
 
 ## Contributing
 

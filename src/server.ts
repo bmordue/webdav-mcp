@@ -6,6 +6,8 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { getAllPresets, getPreset, generatePropfindXml, mergeProperties } from './presets/index.js';
+import type { PropertyDefinition } from './presets/index.js';
 
 // Configuration from environment variables
 const DAV_SERVER_URL = process.env.DAV_SERVER_URL || "";
@@ -18,6 +20,8 @@ interface DavRequestArgs {
   body?: string;
   headers?: Record<string, string>;
   depth?: "0" | "1" | "infinity";
+  preset?: string; // property preset name
+  additionalProperties?: PropertyDefinition[]; // extra properties to merge when using preset
 }
 
 class WebDAVServer {
@@ -57,7 +61,7 @@ class WebDAVServer {
       tools: [
         {
           name: "dav_request",
-          description: "Make a WebDAV request to the configured server. Handles authentication automatically.",
+          description: "Make a WebDAV request to the configured server. Supports property presets for PROPFIND.",
           inputSchema: {
             type: "object",
             properties: {
@@ -72,7 +76,7 @@ class WebDAVServer {
               },
               body: {
                 type: "string",
-                description: "The request body (typically XML for WebDAV operations)",
+                description: "The request body (typically XML for WebDAV operations). Ignored if preset provided.",
               },
               headers: {
                 type: "object",
@@ -86,9 +90,35 @@ class WebDAVServer {
                 enum: ["0", "1", "infinity"],
                 description: "Depth header for PROPFIND requests (0 = resource only, 1 = resource + immediate children, infinity = all)",
               },
+              preset: {
+                type: "string",
+                description: "Optional property preset name for PROPFIND (e.g. 'basic', 'detailed'). If provided, XML body is auto-generated.",
+              },
+              additionalProperties: {
+                type: "array",
+                description: "Extra properties to include in addition to the preset (objects with namespace & name).",
+                items: {
+                  type: "object",
+                  properties: {
+                    namespace: { type: "string" },
+                    name: { type: "string" },
+                  },
+                  required: ["namespace", "name"],
+                },
+              },
             },
             required: ["method", "path"],
           },
+        },
+        {
+          name: "list_property_presets",
+          description: "List available property presets (built-in and user-defined).",
+          inputSchema: { type: "object", properties: {} },
+        },
+        {
+          name: "get_property_preset",
+          description: "Get full definition of a property preset.",
+          inputSchema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
         },
       ],
     }));
@@ -98,6 +128,41 @@ class WebDAVServer {
       if (request.params.name === "dav_request") {
         const args = request.params.arguments as unknown as DavRequestArgs;
         return await this.handleDavRequest(args);
+      }
+      if (request.params.name === 'list_property_presets') {
+        const presets = await getAllPresets();
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                presets: presets.map(p => ({
+                  name: p.name,
+                  description: p.description,
+                  propertyCount: p.properties.length,
+                  builtin: !!p.builtin,
+                }))
+              }, null, 2)
+            }
+          ]
+        };
+      }
+      if (request.params.name === 'get_property_preset') {
+        const { name } = request.params.arguments as { name: string };
+        const preset = await getPreset(name);
+        if (!preset) {
+          return {
+            content: [
+              { type: 'text', text: JSON.stringify({ error: `Preset '${name}' not found`, available: (await getAllPresets()).map(p => p.name) }, null, 2) }
+            ],
+            isError: true
+          };
+        }
+        return {
+          content: [
+            { type: 'text', text: JSON.stringify(preset, null, 2) }
+          ]
+        };
       }
       
       throw new Error(`Unknown tool: ${request.params.name}`);
@@ -131,6 +196,22 @@ class WebDAVServer {
         headers["Authorization"] = `Basic ${auth}`;
       }
 
+      // Handle preset-based PROPFIND
+      if (args.method === 'PROPFIND' && args.preset) {
+        const preset = await getPreset(args.preset);
+        if (!preset) {
+          return {
+            content: [
+              { type: 'text', text: JSON.stringify({ error: `Unknown preset '${args.preset}'`, available: (await getAllPresets()).map(p => p.name) }, null, 2) }
+            ],
+            isError: true
+          };
+        }
+        const merged = mergeProperties(preset.properties, args.additionalProperties);
+        const xml = generatePropfindXml(merged);
+        args.body = xml;
+      }
+
       // Make the request
       const response = await fetch(url, {
         method: args.method,
@@ -149,6 +230,7 @@ class WebDAVServer {
               statusText: response.statusText,
               headers: Object.fromEntries(response.headers.entries()),
               body: responseText,
+              usedPreset: args.preset || undefined,
             }, null, 2),
           },
         ],
