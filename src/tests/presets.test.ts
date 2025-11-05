@@ -15,6 +15,8 @@ function assert(condition: any, message: string) {
   if (!condition) throw new Error(`Assertion failed: ${message}`);
 }
 
+async function testBuiltinPresets() {
+  const presets = await getAllPresets();
 // Helper to clean up test presets directory
 function cleanupPresetsDir() {
   if (fs.existsSync(PRESETS_DIR)) {
@@ -54,16 +56,16 @@ function testBuiltinPresets() {
   assert(names.includes('minimal'), 'minimal preset missing');
 }
 
-function testGenerateXml() {
-  const preset = getPreset('basic');
+async function testGenerateXml() {
+  const preset = await getPreset('basic');
   assert(preset, 'basic preset not found');
   const xml = generatePropfindXml(preset!.properties);
   assert(xml.includes('<D:displayname/>'), 'XML missing displayname');
   assert(xml.startsWith('<?xml'), 'XML should start with declaration');
 }
 
-function testMergeProperties() {
-  const preset = getPreset('minimal');
+async function testMergeProperties() {
+  const preset = await getPreset('minimal');
   assert(preset, 'minimal preset not found');
   const merged = mergeProperties(preset!.properties, [{ namespace: 'DAV:', name: 'getcontentlength' }]);
   assert(merged.length === 2, 'Merge should add property');
@@ -440,16 +442,12 @@ function testValidationInvalidNamespaces() {
   }
 }
 
-export function runAllTests() {
-  console.log('Running builtin preset tests...');
-  testBuiltinPresets();
-  
-  console.log('Running XML generation tests...');
-  testGenerateXml();
+export async function runAllTests() {
+  await testBuiltinPresets();
+  await testGenerateXml();
+  await testMergeProperties();
+
   testGenerateXmlMultipleNamespaces();
-  
-  console.log('Running merge properties tests...');
-  testMergeProperties();
 
   testUserPresetOverride();
   
