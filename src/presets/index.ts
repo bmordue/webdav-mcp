@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 
 export interface PropertyDefinition {
@@ -103,21 +103,23 @@ function validatePreset(preset: any): PropertyPreset | null {
   };
 }
 
-function loadUserPresets(): PropertyPreset[] {
-  if (!fs.existsSync(PRESETS_DIR)) {
-    // Still cache built-ins so subsequent calls are fast
+async function loadUserPresets(): Promise<PropertyPreset[]> {
+  try {
+    await fs.access(PRESETS_DIR);
+  } catch {
+    // Directory doesn't exist, still cache built-ins so subsequent calls are fast
     cache = { loadedAt: Date.now(), presets: [...BUILTIN_PRESETS], mtimes: {} };
     return cache.presets;
   }
   const all: PropertyPreset[] = [];
   const mtimes: Record<string, number> = {};
-  const files = fs.readdirSync(PRESETS_DIR).filter(f => f.endsWith('.json'));
+  const files = (await fs.readdir(PRESETS_DIR)).filter(f => f.endsWith('.json'));
   for (const file of files) {
     const full = path.join(PRESETS_DIR, file);
     try {
-      const stat = fs.statSync(full);
+      const stat = await fs.stat(full);
       mtimes[full] = stat.mtimeMs;
-      const raw = fs.readFileSync(full, 'utf-8');
+      const raw = await fs.readFile(full, 'utf-8');
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         for (const entry of parsed) {
@@ -140,13 +142,13 @@ function loadUserPresets(): PropertyPreset[] {
   return cache.presets;
 }
 
-function cacheValid(): boolean {
+async function cacheValid(): Promise<boolean> {
   if (!cache) return false;
   if (Date.now() - cache.loadedAt > TTL_MS) return false;
   // Check mtime changes
   for (const [file, mtime] of Object.entries(cache.mtimes)) {
     try {
-      const stat = fs.statSync(file);
+      const stat = await fs.stat(file);
       if (stat.mtimeMs !== mtime) return false;
     } catch {
       return false;
@@ -155,13 +157,13 @@ function cacheValid(): boolean {
   return true;
 }
 
-export function getAllPresets(): PropertyPreset[] {
-  if (cacheValid()) return cache!.presets;
+export async function getAllPresets(): Promise<PropertyPreset[]> {
+  if (await cacheValid()) return cache!.presets;
   return loadUserPresets();
 }
 
-export function getPreset(name: string): PropertyPreset | undefined {
-  return getAllPresets().find(p => p.name === name);
+export async function getPreset(name: string): Promise<PropertyPreset | undefined> {
+  return (await getAllPresets()).find(p => p.name === name);
 }
 
 export function generatePropfindXml(properties: PropertyDefinition[]): string {
