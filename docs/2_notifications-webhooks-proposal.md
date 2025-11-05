@@ -422,5 +422,21 @@ Content-Type: application/json
 }
 ```
 
+## Rating and Rationale
+
+**Score: 2/10**
+
+This proposal receives a very low score for the following reasons:
+
+**Suitability (Very Poor):** This proposal fundamentally changes the nature of the WebDAV MCP server from a request-response client into a stateful, event-driven system with background processing. Notifications and webhooks represent an entirely different architectural pattern that doesn't align with the MCP server model, which is designed for synchronous tool invocations, not long-running subscriptions and asynchronous event delivery.
+
+**Goodness-of-fit (Very Poor):** The proposal requires massive architectural changes: (1) Background polling scheduler running independently of MCP requests, (2) Persistent subscription storage with baseline state tracking, (3) Webhook delivery system with retry logic and exponential backoff, (4) Event queue management and buffering, (5) HTTP server capabilities (for server-native SUBSCRIBE if supported). The MCP server would need to transform from a simple stdio-based tool provider into a daemon with concurrent background processes, state management, and external network communications.
+
+**Value Delivered (Questionable):** While notifications and webhooks are valuable for reactive systems, implementing them in an MCP server is architecturally questionable. MCP servers are typically stateless tool providers, not event brokers. Users needing WebDAV notifications would be better served by dedicated change detection systems or using WebDAV server-native notification mechanisms directly. The polling-based approach is inefficient and doesn't scale.
+
+**Limited Scope Expansion (Extremely Poor):** This is the largest scope expansion of all proposals: (1) Four new tools for subscription management plus one for polling mode, (2) Persistent storage for subscriptions and baseline state, (3) Background scheduler for periodic polling, (4) Webhook delivery infrastructure with retry logic, (5) Event detection algorithm comparing resource states, (6) Support for multiple event types and filtering rules, (7) Optional server-native SUBSCRIBE support (RFC 5789). The "future extensions" include WebSocket support, notification replay, dead-letter queues, and multi-instance subscription sharing—each of which would be a major project.
+
+The security and performance considerations are significant: polling generates continuous load on WebDAV servers, webhook delivery failures require complex retry logic, and subscription management across restarts requires careful state handling. This effectively creates an entirely new product focused on event-driven WebDAV monitoring, which is far beyond the scope of an MCP server.
+
 ## Conclusion
 This notification and webhook integration feature enables reactive workflows, real-time synchronisation, and event-driven automation for WebDAV resources. By supporting both server-native and polling-based mechanisms, the feature provides broad compatibility while offering optimal performance where supported. The persistent subscription model ensures reliability across server restarts, and the webhook delivery system enables seamless integration with external systems and workflows.

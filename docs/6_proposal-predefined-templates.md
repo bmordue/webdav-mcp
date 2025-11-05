@@ -73,3 +73,19 @@ A new tool, `list_predefined_templates`, will return a list of the available tem
 2.  Add a library of initial templates for common CalDAV and CardDAV operations.
 3.  Add the `run_predefined_template` and `list_predefined_templates` tools to `server.ts`.
 4.  Add unit tests for template loading and execution.
+
+## Rating and Rationale
+
+**Score: 6/10**
+
+This proposal receives a moderate score for the following reasons:
+
+**Suitability (Moderate):** Predefined templates provide convenience for common CalDAV/CardDAV operations, which is valuable for new users. However, this is essentially a subset of the "Saved Queries" feature—the main difference is that templates are built-in and read-only rather than user-defined.
+
+**Goodness-of-fit (Good):** The proposal explicitly states it builds on the same mechanism as saved queries, which means good architectural alignment. The read-only nature simplifies implementation compared to saved queries. If saved queries are implemented first, adding predefined templates is straightforward.
+
+**Value Delivered (Moderate):** The value is primarily in providing quick-start examples and reducing the learning curve for CalDAV/CardDAV operations. Users get a curated set of working examples without needing to create their own queries. However, the value is somewhat limited because: (1) sophisticated users will likely create their own queries anyway, and (2) the examples could alternatively be provided as documentation or sample query files.
+
+**Limited Scope Expansion (Good):** The proposal is well-constrained—it's explicitly read-only and doesn't support user modifications. The scope is limited to providing built-in templates. However, there's a dependency on the saved queries feature being implemented first, which adds indirect complexity.
+
+The main concern is whether this provides enough incremental value over the saved queries feature to justify separate implementation. It could be argued that sample query files in the repository would achieve similar goals with less code. However, having built-in templates accessible via tools does provide better discoverability for agents.
