@@ -76,8 +76,8 @@ chmod +x src/server.ts
 
 Required configuration:
 - `DAV_SERVER_URL` (required): Base URL of the WebDAV server
-- `DAV_USERNAME` (optional): Username for Basic Authentication
-- `DAV_PASSWORD` (optional): Password for Basic Authentication
+- `DAV_USERNAME` (optional): Username for Basic Authentication (required if the WebDAV server requires authentication)
+- `DAV_PASSWORD` (optional): Password for Basic Authentication (required if the WebDAV server requires authentication)
 
 ## Security Considerations
 
@@ -129,8 +129,8 @@ Required configuration:
 ## Common Patterns
 
 ### Adding a New WebDAV Method
-1. Add the method to the `DavRequestArgs` interface enum
-2. Update the `inputSchema` enum in the tool definition
+1. Add the method to the `DavRequestArgs` interface union type
+2. Update the method property's enum values in the `inputSchema` object in the tool definition
 3. No special handler is typically needed (generic fetch handles most methods)
 4. Update documentation in `README.md`
 
