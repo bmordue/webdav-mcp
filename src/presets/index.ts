@@ -111,7 +111,7 @@ function validatePreset(preset: any): PropertyPreset | null {
 
 async function loadUserPresets(): Promise<PropertyPreset[]> {
   try {
-    await fs.access(PRESETS_DIR);
+    await fs.access(getPresetsDir());
   } catch {
     // Directory doesn't exist, still cache built-ins so subsequent calls are fast
     cache = { loadedAt: Date.now(), presets: [...BUILTIN_PRESETS], mtimes: {} };
@@ -119,9 +119,9 @@ async function loadUserPresets(): Promise<PropertyPreset[]> {
   }
   const all: PropertyPreset[] = [];
   const mtimes: Record<string, number> = {};
-  const files = (await fs.readdir(PRESETS_DIR)).filter(f => f.endsWith('.json'));
+  const files = (await fs.readdir(getPresetsDir())).filter(f => f.endsWith('.json'));
   for (const file of files) {
-    const full = path.join(PRESETS_DIR, file);
+    const full = path.join(getPresetsDir(), file);
     try {
       const stat = await fs.stat(full);
       mtimes[full] = stat.mtimeMs;

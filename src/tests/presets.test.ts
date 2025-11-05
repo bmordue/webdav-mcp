@@ -15,8 +15,6 @@ function assert(condition: any, message: string) {
   if (!condition) throw new Error(`Assertion failed: ${message}`);
 }
 
-async function testBuiltinPresets() {
-  const presets = await getAllPresets();
 // Helper to clean up test presets directory
 function cleanupPresetsDir() {
   if (fs.existsSync(PRESETS_DIR)) {
@@ -48,8 +46,8 @@ function triggerCacheInvalidation(filePath: string, content: any) {
   fs.writeFileSync(filePath, JSON.stringify(content));
 }
 
-function testBuiltinPresets() {
-  const presets = getAllPresets();
+async function testBuiltinPresets() {
+  const presets = await getAllPresets();
   const names = presets.map(p => p.name);
   assert(names.includes('basic'), 'basic preset missing');
   assert(names.includes('detailed'), 'detailed preset missing');
@@ -93,7 +91,7 @@ function testXmlEscaping() {
 }
 
 
-function testUserPresetOverride() {
+async function testUserPresetOverride() {
   // Set up a temporary presets directory
   const tempDir = path.join(os.tmpdir(), 'test-presets-override');
   const oldEnv = process.env.DAV_PROPERTY_PRESETS_DIR;
@@ -126,8 +124,7 @@ function testUserPresetOverride() {
     // Clear the cache to force reload with new environment
     clearCache();
     
-    const presets = getAllPresets();
-    const basic = getPreset('basic');
+    const basic = await getPreset('basic');
     
     assert(basic, 'basic preset should exist');
     assert(basic!.description === 'Custom basic preset', 'User preset should override built-in description');
@@ -149,6 +146,8 @@ function testUserPresetOverride() {
     } else {
       delete process.env.DAV_PROPERTY_PRESETS_TTL_MS;
     }
+  }
+}
 
  function testGenerateXmlMultipleNamespaces() {
   const properties = [
@@ -171,7 +170,7 @@ function testUserPresetOverride() {
   assert(xml.includes('<N0:customprop3/>'), 'Missing ns1 property 2');
 }
 
-function testFileLoadingValidJSON() {
+async function testFileLoadingValidJSON() {
   cleanupPresetsDir();
   ensurePresetsDir();
   
@@ -200,13 +199,13 @@ function testFileLoadingValidJSON() {
     // Trigger cache reload
     triggerCacheInvalidation(file1, [preset1]);
     
-    const presets = getAllPresets();
+    const presets = await getAllPresets();
     const names = presets.map(p => p.name);
     
     assert(names.includes('custom1'), 'custom1 preset not loaded');
     assert(names.includes('custom2'), 'custom2 preset not loaded');
     
-    const c1 = getPreset('custom1');
+    const c1 = await getPreset('custom1');
     assert(c1 && c1.description === 'Custom preset 1', 'custom1 description mismatch');
     assert(c1 && c1.properties.length === 2, 'custom1 should have 2 properties');
   } finally {
@@ -215,7 +214,7 @@ function testFileLoadingValidJSON() {
 }
 
 // New test: File loading with malformed JSON
-function testFileLoadingMalformedJSON() {
+async function testFileLoadingMalformedJSON() {
   cleanupPresetsDir();
   ensurePresetsDir();
   
@@ -235,7 +234,7 @@ function testFileLoadingMalformedJSON() {
     triggerCacheInvalidation(validFile, validPreset);
     
     // Should not throw, malformed file should be skipped
-    const presets = getAllPresets();
+    const presets = await getAllPresets();
     const names = presets.map(p => p.name);
     
     // Valid preset should still be loaded
@@ -246,7 +245,7 @@ function testFileLoadingMalformedJSON() {
 }
 
 // New test: Validation with invalid names
-function testValidationInvalidNames() {
+async function testValidationInvalidNames() {
   cleanupPresetsDir();
   ensurePresetsDir();
   
@@ -264,7 +263,7 @@ function testValidationInvalidNames() {
     // Trigger cache reload
     triggerCacheInvalidation(file, invalidPresets);
     
-    const presets = getAllPresets();
+    const presets = await getAllPresets();
     const names = presets.map(p => p.name);
     
     // Only the valid preset should be loaded
@@ -278,7 +277,7 @@ function testValidationInvalidNames() {
 }
 
 // New test: Validation with missing properties
-function testValidationMissingProperties() {
+async function testValidationMissingProperties() {
   cleanupPresetsDir();
   ensurePresetsDir();
   
@@ -294,7 +293,7 @@ function testValidationMissingProperties() {
     // Trigger cache reload
     triggerCacheInvalidation(file, invalidPresets);
     
-    const presets = getAllPresets();
+    const presets = await getAllPresets();
     const names = presets.map(p => p.name);
     
     assert(!names.includes('no-props'), 'Preset without properties should be rejected');
@@ -306,7 +305,7 @@ function testValidationMissingProperties() {
 }
 
 // New test: Validation with oversized presets
-function testValidationOversizedPresets() {
+async function testValidationOversizedPresets() {
   cleanupPresetsDir();
   ensurePresetsDir();
   
@@ -333,7 +332,7 @@ function testValidationOversizedPresets() {
     // Trigger cache reload
     triggerCacheInvalidation(file, [oversizedPreset, validPreset]);
     
-    const presets = getAllPresets();
+    const presets = await getAllPresets();
     const names = presets.map(p => p.name);
     
     assert(!names.includes('oversized'), 'Oversized preset should be rejected');
@@ -344,7 +343,7 @@ function testValidationOversizedPresets() {
 }
 
 // New test: Cache TTL expiration
-function testCacheTTLExpiration() {
+async function testCacheTTLExpiration() {
   cleanupPresetsDir();
   ensurePresetsDir();
   
@@ -360,12 +359,12 @@ function testCacheTTLExpiration() {
     // First load - trigger cache
     triggerCacheInvalidation(file, preset1);
     
-    let presets = getAllPresets();
+    let presets = await getAllPresets();
     let names = presets.map(p => p.name);
     assert(names.includes('ttl-test1'), 'Initial preset should be loaded');
     
     // Second load (should use cache)
-    presets = getAllPresets();
+    presets = await getAllPresets();
     names = presets.map(p => p.name);
     assert(names.includes('ttl-test1'), 'Cached preset should be returned');
     
@@ -380,7 +379,7 @@ function testCacheTTLExpiration() {
     fs.writeFileSync(file, JSON.stringify(preset2));
     
     // Load after TTL expiration - should reload and get new preset
-    presets = getAllPresets();
+    presets = await getAllPresets();
     names = presets.map(p => p.name);
     assert(names.includes('ttl-test2'), 'New preset should be loaded after TTL expiration');
     assert(!names.includes('ttl-test1'), 'Old preset should not be present after reload');
@@ -390,7 +389,7 @@ function testCacheTTLExpiration() {
 }
 
 // New test: Cache mtime-based invalidation
-function testCacheMtimeInvalidation() {
+async function testCacheMtimeInvalidation() {
   cleanupPresetsDir();
   ensurePresetsDir();
   
@@ -407,7 +406,7 @@ function testCacheMtimeInvalidation() {
     // First load - trigger cache
     triggerCacheInvalidation(file, preset1);
     
-    let presets = getAllPresets();
+    let presets = await getAllPresets();
     let names = presets.map(p => p.name);
     assert(names.includes('mtime-test1'), 'Initial preset should be loaded');
     
@@ -419,7 +418,7 @@ function testCacheMtimeInvalidation() {
     triggerCacheInvalidation(file, preset2);
     
     // Load again - cache should be invalidated due to mtime change
-    presets = getAllPresets();
+    presets = await getAllPresets();
     names = presets.map(p => p.name);
     assert(names.includes('mtime-test2'), 'New preset should be loaded after mtime change');
     assert(!names.includes('mtime-test1'), 'Old preset should not be present after mtime change');
@@ -429,7 +428,7 @@ function testCacheMtimeInvalidation() {
 }
 
 // New test: Validation with invalid namespaces
-function testValidationInvalidNamespaces() {
+async function testValidationInvalidNamespaces() {
   cleanupPresetsDir();
   ensurePresetsDir();
   
@@ -449,7 +448,7 @@ function testValidationInvalidNamespaces() {
     // Trigger cache reload
     triggerCacheInvalidation(file, presets);
     
-    const loadedPresets = getAllPresets();
+    const loadedPresets = await getAllPresets();
     const preset = loadedPresets.find(p => p.name === 'invalid-ns');
     
     // Preset should exist but invalid namespace property should be filtered out
@@ -495,5 +494,5 @@ export async function runAllTests() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  runAllTests();
+  await runAllTests();
 }
