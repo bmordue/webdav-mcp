@@ -130,7 +130,7 @@ class WebDAVServer {
         return await this.handleDavRequest(args);
       }
       if (request.params.name === 'list_property_presets') {
-        const presets = getAllPresets();
+        const presets = await getAllPresets();
         return {
           content: [
             {
@@ -149,11 +149,11 @@ class WebDAVServer {
       }
       if (request.params.name === 'get_property_preset') {
         const { name } = request.params.arguments as { name: string };
-        const preset = getPreset(name);
+        const preset = await getPreset(name);
         if (!preset) {
           return {
             content: [
-              { type: 'text', text: JSON.stringify({ error: `Preset '${name}' not found`, available: getAllPresets().map(p => p.name) }, null, 2) }
+              { type: 'text', text: JSON.stringify({ error: `Preset '${name}' not found`, available: (await getAllPresets()).map(p => p.name) }, null, 2) }
             ],
             isError: true
           };
@@ -198,11 +198,11 @@ class WebDAVServer {
 
       // Handle preset-based PROPFIND
       if (args.method === 'PROPFIND' && args.preset) {
-        const preset = getPreset(args.preset);
+        const preset = await getPreset(args.preset);
         if (!preset) {
           return {
             content: [
-              { type: 'text', text: JSON.stringify({ error: `Unknown preset '${args.preset}'`, available: getAllPresets().map(p => p.name) }, null, 2) }
+              { type: 'text', text: JSON.stringify({ error: `Unknown preset '${args.preset}'`, available: (await getAllPresets()).map(p => p.name) }, null, 2) }
             ],
             isError: true
           };

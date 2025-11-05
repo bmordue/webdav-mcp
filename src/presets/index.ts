@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 
 export interface PropertyDefinition {
@@ -54,8 +54,6 @@ const BUILTIN_PRESETS: PropertyPreset[] = [
 
 const MAX_PROPERTIES_PER_PRESET = 100;
 const MAX_PRESETS_TOTAL = 200;
-const PRESETS_DIR = process.env.DAV_PROPERTY_PRESETS_DIR || path.resolve(process.cwd(), 'property-presets');
-const TTL_MS = Number(process.env.DAV_PROPERTY_PRESETS_TTL_MS || '5000');
 
 interface CacheEntry {
   loadedAt: number;
@@ -65,8 +63,16 @@ interface CacheEntry {
 
 let cache: CacheEntry | null = null;
 
+function getPresetsDir(): string {
+  return process.env.DAV_PROPERTY_PRESETS_DIR || path.resolve(process.cwd(), 'property-presets');
+}
+
+function getTTL(): number {
+  return Number(process.env.DAV_PROPERTY_PRESETS_TTL_MS || '5000');
+}
+
 function isValidNamespace(ns: string): boolean {
-  // Basic URI validation: must contain ':' and at least one '/'
+  // Basic URI validation: must be a valid URL with protocol
   if (ns === 'DAV:') return true; // Special case DAV: pseudo-URI
   try {
     const url = new URL(ns);
@@ -103,21 +109,23 @@ function validatePreset(preset: any): PropertyPreset | null {
   };
 }
 
-function loadUserPresets(): PropertyPreset[] {
-  if (!fs.existsSync(PRESETS_DIR)) {
-    // Still cache built-ins so subsequent calls are fast
+async function loadUserPresets(): Promise<PropertyPreset[]> {
+  try {
+    await fs.access(PRESETS_DIR);
+  } catch {
+    // Directory doesn't exist, still cache built-ins so subsequent calls are fast
     cache = { loadedAt: Date.now(), presets: [...BUILTIN_PRESETS], mtimes: {} };
     return cache.presets;
   }
   const all: PropertyPreset[] = [];
   const mtimes: Record<string, number> = {};
-  const files = fs.readdirSync(PRESETS_DIR).filter(f => f.endsWith('.json'));
+  const files = (await fs.readdir(PRESETS_DIR)).filter(f => f.endsWith('.json'));
   for (const file of files) {
     const full = path.join(PRESETS_DIR, file);
     try {
-      const stat = fs.statSync(full);
+      const stat = await fs.stat(full);
       mtimes[full] = stat.mtimeMs;
-      const raw = fs.readFileSync(full, 'utf-8');
+      const raw = await fs.readFile(full, 'utf-8');
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         for (const entry of parsed) {
@@ -136,17 +144,22 @@ function loadUserPresets(): PropertyPreset[] {
     console.warn(`[presets] Too many presets loaded (${all.length}), truncating to ${MAX_PRESETS_TOTAL}`);
     return all.slice(0, MAX_PRESETS_TOTAL);
   }
-  cache = { loadedAt: Date.now(), presets: [...BUILTIN_PRESETS, ...all], mtimes };
+  // Use a Map to ensure user presets override built-in presets with the same name
+  const presetMap = new Map<string, PropertyPreset>();
+  BUILTIN_PRESETS.forEach(p => presetMap.set(p.name, p));
+  all.forEach(p => presetMap.set(p.name, p)); // User presets override built-ins
+  cache = { loadedAt: Date.now(), presets: Array.from(presetMap.values()), mtimes };
   return cache.presets;
 }
 
-function cacheValid(): boolean {
+async function cacheValid(): Promise<boolean> {
   if (!cache) return false;
+  const TTL_MS = getTTL();
   if (Date.now() - cache.loadedAt > TTL_MS) return false;
   // Check mtime changes
   for (const [file, mtime] of Object.entries(cache.mtimes)) {
     try {
-      const stat = fs.statSync(file);
+      const stat = await fs.stat(file);
       if (stat.mtimeMs !== mtime) return false;
     } catch {
       return false;
@@ -155,13 +168,18 @@ function cacheValid(): boolean {
   return true;
 }
 
-export function getAllPresets(): PropertyPreset[] {
-  if (cacheValid()) return cache!.presets;
+export async function getAllPresets(): Promise<PropertyPreset[]> {
+  if (await cacheValid()) return cache!.presets;
   return loadUserPresets();
 }
 
-export function getPreset(name: string): PropertyPreset | undefined {
-  return getAllPresets().find(p => p.name === name);
+export async function getPreset(name: string): Promise<PropertyPreset | undefined> {
+  return (await getAllPresets()).find(p => p.name === name);
+}
+
+// For testing purposes - clears the cache
+export function clearCache(): void {
+  cache = null;
 }
 
 /**
