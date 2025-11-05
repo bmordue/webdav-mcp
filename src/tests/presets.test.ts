@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-import { getAllPresets, getPreset, generatePropfindXml, mergeProperties } from '../presets/index.js';
+import { getAllPresets, getPreset, generatePropfindXml, mergeProperties, clearCache } from '../presets/index.js';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
+
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -70,8 +72,64 @@ function testMergeProperties() {
   assert(merged2.length === 2, 'Duplicate should be deduped');
 }
 
-// New test: XML generation with multiple custom namespaces
-function testGenerateXmlMultipleNamespaces() {
+function testUserPresetOverride() {
+  // Set up a temporary presets directory
+  const tempDir = path.join(os.tmpdir(), 'test-presets-override');
+  const oldEnv = process.env.DAV_PROPERTY_PRESETS_DIR;
+  const oldTTL = process.env.DAV_PROPERTY_PRESETS_TTL_MS;
+  
+  try {
+    // Create test directory and a custom "basic" preset that overrides the built-in
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true });
+    }
+    fs.mkdirSync(tempDir, { recursive: true });
+    
+    const customBasic = {
+      name: 'basic',
+      description: 'Custom basic preset',
+      properties: [
+        { namespace: 'DAV:', name: 'custom-prop' }
+      ]
+    };
+    
+    fs.writeFileSync(
+      path.join(tempDir, 'custom.json'),
+      JSON.stringify(customBasic, null, 2)
+    );
+    
+    // Set environment to use our test directory
+    process.env.DAV_PROPERTY_PRESETS_DIR = tempDir;
+    process.env.DAV_PROPERTY_PRESETS_TTL_MS = '0'; // Disable cache TTL to force immediate reload
+    
+    // Clear the cache to force reload with new environment
+    clearCache();
+    
+    const presets = getAllPresets();
+    const basic = getPreset('basic');
+    
+    assert(basic, 'basic preset should exist');
+    assert(basic!.description === 'Custom basic preset', 'User preset should override built-in description');
+    assert(basic!.properties.length === 1, 'User preset should have custom properties');
+    assert(basic!.properties[0]?.name === 'custom-prop', 'User preset should have custom-prop');
+  } finally {
+    // Cleanup
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true });
+    }
+    // Restore environment
+    if (oldEnv) {
+      process.env.DAV_PROPERTY_PRESETS_DIR = oldEnv;
+    } else {
+      delete process.env.DAV_PROPERTY_PRESETS_DIR;
+    }
+    if (oldTTL) {
+      process.env.DAV_PROPERTY_PRESETS_TTL_MS = oldTTL;
+    } else {
+      delete process.env.DAV_PROPERTY_PRESETS_TTL_MS;
+    }
+
+ function testGenerateXmlMultipleNamespaces() {
   const properties = [
     { namespace: 'DAV:', name: 'displayname' },
     { namespace: 'http://example.com/ns1', name: 'customprop1' },
@@ -92,7 +150,6 @@ function testGenerateXmlMultipleNamespaces() {
   assert(xml.includes('<N0:customprop3/>'), 'Missing ns1 property 2');
 }
 
-// New test: File loading with valid JSON
 function testFileLoadingValidJSON() {
   cleanupPresetsDir();
   ensurePresetsDir();
@@ -393,6 +450,8 @@ export function runAllTests() {
   
   console.log('Running merge properties tests...');
   testMergeProperties();
+
+  testUserPresetOverride();
   
   // Wait for cache to expire before running file loading tests
   // This ensures the cache from testBuiltinPresets() doesn't interfere
@@ -412,7 +471,7 @@ export function runAllTests() {
   console.log('Running cache tests...');
   testCacheTTLExpiration();
   testCacheMtimeInvalidation();
-  
+
   console.log('All tests passed');
 }
 
