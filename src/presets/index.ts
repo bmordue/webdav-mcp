@@ -166,6 +166,7 @@ export function getPreset(name: string): PropertyPreset | undefined {
 
 /**
  * Escapes special XML characters in attribute values to prevent XML injection.
+ * Note: The ampersand (&) must be replaced first to avoid double-escaping.
  * @param value The string value to escape
  * @returns The escaped string safe for use in XML attributes
  */
