@@ -72,7 +72,7 @@ function getTTL(): number {
 }
 
 function isValidNamespace(ns: string): boolean {
-  // Basic URI validation: must contain ':' and at least one '/'
+  // Basic URI validation: must be a valid URL with protocol
   if (ns === 'DAV:') return true; // Special case DAV: pseudo-URI
   try {
     const url = new URL(ns);
