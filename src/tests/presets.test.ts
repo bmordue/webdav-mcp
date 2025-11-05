@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { getAllPresets, getPreset, generatePropfindXml, mergeProperties } from '../presets/index.js';
+import { getAllPresets, getPreset, generatePropfindXml, mergeProperties, clearCache } from '../presets/index.js';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 function assert(condition: any, message: string) {
   if (!condition) throw new Error(`Assertion failed: ${message}`);
@@ -35,7 +36,7 @@ function testMergeProperties() {
 
 function testUserPresetOverride() {
   // Set up a temporary presets directory
-  const tempDir = '/tmp/test-presets-override';
+  const tempDir = path.join(os.tmpdir(), 'test-presets-override');
   const oldEnv = process.env.DAV_PROPERTY_PRESETS_DIR;
   const oldTTL = process.env.DAV_PROPERTY_PRESETS_TTL_MS;
   
@@ -61,10 +62,11 @@ function testUserPresetOverride() {
     
     // Set environment to use our test directory
     process.env.DAV_PROPERTY_PRESETS_DIR = tempDir;
-    process.env.DAV_PROPERTY_PRESETS_TTL_MS = '0'; // Force reload
+    process.env.DAV_PROPERTY_PRESETS_TTL_MS = '0'; // Disable cache TTL to force immediate reload
     
-    // Clear the cache by reimporting (we need to force a fresh load)
-    // Since we can't easily clear the module cache, we'll just call getAllPresets which should reload
+    // Clear the cache to force reload with new environment
+    clearCache();
+    
     const presets = getAllPresets();
     const basic = getPreset('basic');
     
@@ -72,10 +74,11 @@ function testUserPresetOverride() {
     assert(basic!.description === 'Custom basic preset', 'User preset should override built-in description');
     assert(basic!.properties.length === 1, 'User preset should have custom properties');
     assert(basic!.properties[0]?.name === 'custom-prop', 'User preset should have custom-prop');
-    
-    // Cleanup
-    fs.rmSync(tempDir, { recursive: true });
   } finally {
+    // Cleanup
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true });
+    }
     // Restore environment
     if (oldEnv) {
       process.env.DAV_PROPERTY_PRESETS_DIR = oldEnv;

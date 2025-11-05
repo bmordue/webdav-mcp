@@ -146,7 +146,7 @@ function loadUserPresets(): PropertyPreset[] {
   // Use a Map to ensure user presets override built-in presets with the same name
   const presetMap = new Map<string, PropertyPreset>();
   BUILTIN_PRESETS.forEach(p => presetMap.set(p.name, p));
-  all.forEach(p => presetMap.set(p.name, p)); // User presets overwrite built-ins
+  all.forEach(p => presetMap.set(p.name, p)); // User presets override built-ins
   cache = { loadedAt: Date.now(), presets: Array.from(presetMap.values()), mtimes };
   return cache.presets;
 }
@@ -174,6 +174,11 @@ export function getAllPresets(): PropertyPreset[] {
 
 export function getPreset(name: string): PropertyPreset | undefined {
   return getAllPresets().find(p => p.name === name);
+}
+
+// For testing purposes - clears the cache
+export function clearCache(): void {
+  cache = null;
 }
 
 export function generatePropfindXml(properties: PropertyDefinition[]): string {
