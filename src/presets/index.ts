@@ -182,6 +182,21 @@ export function clearCache(): void {
   cache = null;
 }
 
+/**
+ * Escapes special XML characters in attribute values to prevent XML injection.
+ * Note: The ampersand (&) must be replaced first to avoid double-escaping.
+ * @param value The string value to escape
+ * @returns The escaped string safe for use in XML attributes
+ */
+function escapeXmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export function generatePropfindXml(properties: PropertyDefinition[]): string {
   // Collect unique namespaces -> prefix mapping
   const namespaces = Array.from(new Set(properties.map(p => p.namespace)));
@@ -196,7 +211,7 @@ export function generatePropfindXml(properties: PropertyDefinition[]): string {
   }
   // Build XML
   const xmlnsDecl = Object.entries(prefixMap)
-    .map(([ns, prefix]) => `xmlns:${prefix}="${ns}"`) // ns already validated
+    .map(([ns, prefix]) => `xmlns:${prefix}="${escapeXmlAttribute(ns)}"`)
     .join(' ');
   const propLines = properties.map(p => `<${prefixMap[p.namespace]}:${p.name}/>`) // names validated
     .join('\n    ');

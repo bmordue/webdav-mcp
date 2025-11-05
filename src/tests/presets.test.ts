@@ -74,6 +74,25 @@ async function testMergeProperties() {
   assert(merged2.length === 2, 'Duplicate should be deduped');
 }
 
+
+function testXmlEscaping() {
+  // Test that special XML characters in namespace URIs are properly escaped
+  const properties = [
+    { namespace: 'http://example.com/ns?foo=bar&baz=qux', name: 'test1' },
+    { namespace: 'http://test.com/ns<script>', name: 'test2' },
+    { namespace: 'DAV:', name: 'displayname' }
+  ];
+  const xml = generatePropfindXml(properties);
+  // Verify ampersands are escaped
+  assert(xml.includes('&amp;'), 'Ampersands should be escaped');
+  assert(!xml.includes('foo=bar&baz'), 'Unescaped ampersands should not be present');
+  // Verify angle brackets are escaped
+  assert(xml.includes('&lt;'), 'Less-than signs should be escaped');
+  assert(xml.includes('&gt;'), 'Greater-than signs should be escaped');
+  assert(!xml.includes('<script>'), 'Unescaped script tags should not be present');
+}
+
+
 function testUserPresetOverride() {
   // Set up a temporary presets directory
   const tempDir = path.join(os.tmpdir(), 'test-presets-override');
@@ -446,6 +465,8 @@ export async function runAllTests() {
   await testBuiltinPresets();
   await testGenerateXml();
   await testMergeProperties();
+  
+  testXmlEscaping();
 
   testGenerateXmlMultipleNamespaces();
 
