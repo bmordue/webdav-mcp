@@ -1,7 +1,7 @@
 # Proposal: Saved WebDAV Query Feature
 
 ## Summary
-Provide a mechanism for users to define and persist a set of commonly used WebDAV request "queries" (parameterised request templates) that the MCP server can enumerate and execute on demand. These [...]  
+Provide a mechanism for users to define and persist a set of commonly used WebDAV request "queries" (parameterised request templates) that the MCP server can enumerate and execute on demand. These saved queries reduce repetition, promote consistency, and enable higher-level agent prompting ("Use saved query: list_root" rather than manually crafting a PROPFIND body each time).
 
 ## Goals
 - Allow users to persist named WebDAV request templates.
@@ -40,7 +40,7 @@ Introduce two new MCP tools:
    - Resolves template, performs placeholder substitution, dispatches underlying request using existing `dav_request` logic.
 
 ### Storage Format
-A directory `saved-queries/` (configurable via env var `DAV_SAVED_QUERIES_DIR`, default `./saved-queries`). Each file is either JSON or YAML (initially, support JSON only for simplicity) containin[...]  
+A directory `saved-queries/` (configurable via env var `DAV_SAVED_QUERIES_DIR`, default `./saved-queries`). Each file is either JSON or YAML (initially, support JSON only for simplicity) containing an array of query objects:
 
 ```json
 [
@@ -177,131 +177,5 @@ interface SavedQueryDefinition {
 - Add grouping/tagging for queries.
 - Provide summarised docs tool returning markdown description of all queries.
 
-### Example Conversation (Human ↔ Agent)
-Illustrative end-to-end flow once the feature is implemented.
-
-```
-Human: Can you list the saved WebDAV queries?
-
-Agent: I will enumerate saved queries.
-Agent Tool Invocation:
-{
-  "name": "list_saved_queries",
-  "arguments": {}
-}
-
-Tool Response:
-{
-  "queries": [
-    {
-      "name": "list_root",
-      "description": "List root collection depth 1",
-      "method": "PROPFIND",
-      "pathTemplate": "/",
-      "requiredParams": [],
-      "depth": "1"
-    },
-    {
-      "name": "put_text_file",
-      "description": "Upload a text file at /notes/<filename>",
-      "method": "PUT",
-      "pathTemplate": "/notes/{{filename}}",
-      "requiredParams": ["filename", "content"]
-    }
-  ]
-}
-
-Agent: Available queries are 'list_root' and 'put_text_file'. What shall I run?
-
-Human: Run the one that lists the root.
-
-Agent: Executing 'list_root'.
-Agent Tool Invocation:
-{
-  "name": "run_saved_query",
-  "arguments": {
-    "name": "list_root",
-    "params": {}
-  }
-}
-
-Tool Response (simplified):
-{
-  "status": 207,
-  "headers": {"content-type": "text/xml; charset=utf-8"},
-  "body": "<multistatus>...</multistatus>"
-}
-
-Agent: Directory listing returned. Shall I upload a note file?
-
-Human: Yes, create meeting.txt with content 'Agenda draft'.
-
-Agent: Executing upload via saved query.
-Agent Tool Invocation:
-{
-  "name": "run_saved_query",
-  "arguments": {
-    "name": "put_text_file",
-    "params": {
-      "filename": "meeting.txt",
-      "content": "Agenda draft"
-    }
-  }
-}
-
-Tool Response:
-{
-  "status": 201,
-  "headers": {"content-length": "0"},
-  "body": ""
-}
-
-Agent: /notes/meeting.txt created successfully.
-
-Human: Try uploading another file but forget the content.
-
-Agent: Attempting with missing parameter to show error.
-Agent Tool Invocation:
-{
-  "name": "run_saved_query",
-  "arguments": {
-    "name": "put_text_file",
-    "params": {
-      "filename": "empty.txt"
-    }
-  }
-}
-
-Tool Error Response:
-{
-  "isError": true,
-  "error": "Missing required parameters: content"
-}
-
-Agent: The server rejected the request because 'content' was not supplied.
-```
-
-### Conversation Highlights
-- Discovery without prior hard-coding (via `list_saved_queries`).
-- Parameter safety and validation (clear missing parameter error).
-- Template reuse reduces request verbosity.
-- Consistent response format identical to direct `dav_request` usage.
-
-## Rating and Rationale
-
-**Score: 7/10**
-
-This proposal receives a good score for the following reasons:
-
-**Suitability (Good):** Saved queries address a common pattern in WebDAV usage—repeating similar requests with different parameters. This is a legitimate usability enhancement that would benefit both interactive users and automated agents.
-
-**Goodness-of-fit (Good):** The proposal integrates well with existing architecture by building on the current `dav_request` tool. The file-based storage approach is consistent with the project's lightweight philosophy, and the template substitution mechanism is straightforward. The caching strategy is sensible and similar to the property presets proposal.
-
-**Value Delivered (Good):** Users gain significant productivity through reusable templates, reducing errors and ensuring consistency. The parameter validation and clear error messages add value. The ability to version-control query definitions (as JSON files) is a nice benefit for teams.
-
-**Limited Scope Expansion (Moderate):** While the proposal is focused on template substitution, there are several areas of concern: (1) Parameter injection security requires careful handling of path traversal and XML injection, (2) The temptation to add "just one more feature" like conditionals, loops, or sanitisation filters could lead to scope creep, and (3) The proposal acknowledges several "future extensions" that could expand scope significantly.
-
-The implementation complexity is moderate—template parsing and substitution are well-understood problems, but the security considerations around parameter injection need careful attention. The proposal wisely limits initial scope to simple placeholder replacement without complex logic.
-
 ## Conclusion
-This feature introduces a lightweight, human-readable mechanism to store and re-use named WebDAV request templates, improving ergonomics for both human users and automated agents. The approach mi[...]  
+This feature introduces a lightweight, human-readable mechanism to store and re-use named WebDAV request templates, improving ergonomics for both human users and automated agents. The approach minimises complexity while leaving room for future enhancements such as sanitisation, defaults, and remote synchronisation.
