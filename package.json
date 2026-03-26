@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.19.1",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
